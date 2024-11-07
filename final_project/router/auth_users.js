@@ -30,7 +30,7 @@ regd_users.use(session({secret:"fingerprint",resave:true,saveUninitialized:true}
 regd_users.use(express.json());
 
 // Middleware to authenticate requests to "/login" endpoint
-regd_users.use("/regd_users", function auth(req, res, next) {
+regd_users.use("/customer", function auth(req, res, next) {
     // Check if user is logged in and has valid access token
     if (req.session.authorization) {
         let token = req.session.authorization['accessToken'];
@@ -102,7 +102,7 @@ regd_users.put("/auth/review/:isbn", (req, res) => {
             book.reviews.push({ username, review });
         }    
         res.status(200).json({
-            message: `${book.title} is updated with the review.`,
+            message: `${book.title} has a review added or updated. Existing reviews are below:`,
             reviews: book.reviews
         });;
     } else {
@@ -111,6 +111,33 @@ regd_users.put("/auth/review/:isbn", (req, res) => {
         res.status(404).send("Unable to find book!");
     }
 });
+
+// Delete a book review
+regd_users.delete("/auth/review/:isbn", (req, res) => {
+    const isbn = req.params.isbn
+    let book = books[isbn];  // Retrieve book object associated with isbn
+
+    if (book) {  // Check book exists
+        let username = req.body.username;
+        let review = req.body.review;
+        // Check if user already posted a review for this book
+        for (const existing_review of book.reviews) {
+            if (existing_review.username === username) {
+                delete existing_review.review;  // Delete existing review
+                delete existing_review.username;
+                break;
+            }
+        }
+        res.status(200).json({
+            message: `${book.title} has a review deleted. Existing reviews are below:`,
+            reviews: book.reviews
+        });;
+    } else {
+        // Respond if book with specified isbn is not found
+        console.log("Unable to find book with ISBN:", isbn);
+        res.status(404).send("Unable to find book!");
+    }
+})
 
 module.exports.authenticated = regd_users;
 module.exports.isValid = isValid;
