@@ -30,7 +30,7 @@ regd_users.use(session({secret:"fingerprint",resave:true,saveUninitialized:true}
 regd_users.use(express.json());
 
 // Middleware to authenticate requests to "/login" endpoint
-regd_users.use("users", function auth(req, res, next) {
+regd_users.use("/regd_users", function auth(req, res, next) {
     // Check if user is logged in and has valid access token
     if (req.session.authorization) {
         let token = req.session.authorization['accessToken'];
@@ -70,7 +70,7 @@ regd_users.post("/login", (req,res) => {
         }
         return res.status(200).send("User successfully logged in");
     } else {
-        return res.status(208).json({ message: "Invalid Login. Check username and password" });
+        return res.status(208).json({ message: "Invalid Login. Check username and password"});
     }
 });
 
@@ -78,7 +78,38 @@ regd_users.post("/login", (req,res) => {
 // Add a book review
 regd_users.put("/auth/review/:isbn", (req, res) => {
   //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
+    const isbn = req.params.isbn
+    console.log(`Request received for ISBN: ${isbn}`);
+    let book = books[isbn];  // Retrieve book object associated with isbn
+    let add_review = true;
+
+
+    if (book) {  // Check book exists
+        let username = req.body.username;
+        let review = req.body.review;
+        console.log(`Reviewing book: ${book.title}, username: ${username}, review: ${review}`);
+        // Check if user already posted a review for this book
+        for (const existing_review of book.reviews) {
+            if (existing_review.username === username) {
+                existing_review.review = review;  // Update existing review
+                add_review = false;
+                break;
+            }
+        }
+        if (add_review) {
+            // if user posts a review on a ISBN for 1st time, add review
+            console.log(`Adding new review for ${book.title}`);
+            book.reviews.push({ username, review });
+        }    
+        res.status(200).json({
+            message: `${book.title} is updated with the review.`,
+            reviews: book.reviews
+        });;
+    } else {
+        // Respond if book with specified isbn is not found
+        console.log("Unable to find book with ISBN:", isbn);
+        res.status(404).send("Unable to find book!");
+    }
 });
 
 module.exports.authenticated = regd_users;
